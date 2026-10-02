@@ -76,6 +76,8 @@ class CommitsStack(Stack):
             client_ids=["sts.amazonaws.com"],
         )
 
+        ci_owner, ci_repo_name = CI_REPO.split("/")
+
         deploy_role = iam.Role(
             self, "GitHubActionsDeployRole",
             role_name="github-actions-cdk-deploy",
@@ -87,7 +89,13 @@ class CommitsStack(Stack):
                         "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
                     },
                     "StringLike": {
-                        "token.actions.githubusercontent.com:sub": f"repo:{CI_REPO}:*",
+                        # GitHub's "sub" claim can use plain owner/repo names, or
+                        # immutable numeric IDs (repo:OWNER@OWNER_ID/REPO@REPO_ID:*)
+                        # depending on the account's OIDC subject claim settings.
+                        "token.actions.githubusercontent.com:sub": [
+                            f"repo:{CI_REPO}:*",
+                            f"repo:{ci_owner}@*/{ci_repo_name}@*:*",
+                        ],
                     },
                 },
                 assume_role_action="sts:AssumeRoleWithWebIdentity",

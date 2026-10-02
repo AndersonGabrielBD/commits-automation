@@ -1,58 +1,33 @@
+# commits-automation
 
-# Welcome to your CDK Python project!
+Keeps the [`daily-log`](https://github.com/AndersonGabrielBD/daily-log) repo green: a scheduled AWS Lambda commits a line to it twice a day.
 
-This is a blank project for CDK development with Python.
+## How it works
 
-The `cdk.json` file tells the CDK Toolkit how to execute your app.
+- **AWS CDK** (Python) provisions the infrastructure in `commits/commits_stack.py`.
+- A **Lambda function** (`lambda/daily_commit/handler.py`) reads a GitHub fine-grained PAT from
+  AWS Secrets Manager and uses the GitHub Contents API to append a line to `commits.md` in the
+  target repo.
+- Two **EventBridge rules** trigger the Lambda daily at 10:00 and 15:00 (America/Sao_Paulo):
+  each run is tagged with a `slot` (`morning` / `afternoon`) so both commits land even on the
+  same day, and reruns within the same slot are idempotent (no duplicate commits).
+- **GitHub Actions** (`.github/workflows/deploy.yml`) deploys on every push to `main` via OIDC
+  (no long-lived AWS keys): pull requests get a `cdk synth` + `cdk diff` check, merges to `main`
+  run `cdk deploy`.
 
-This project is set up like a standard Python project.  The initialization
-process also creates a virtualenv within this project, stored under the `.venv`
-directory.  To create the virtualenv it assumes that there is a `python3`
-(or `python` for Windows) executable in your path with access to the `venv`
-package. If for any reason the automatic creation of the virtualenv fails,
-you can create the virtualenv manually.
+## Local development
 
-To manually create a virtualenv on MacOS and Linux:
-
+```powershell
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+cdk synth
+cdk diff
+cdk deploy
 ```
-$ python -m venv .venv
-```
-
-After the init process completes and the virtualenv is created, you can use the following
-step to activate your virtualenv.
-
-```
-$ source .venv/bin/activate
-```
-
-If you are a Windows platform, you would activate the virtualenv like this:
-
-```
-% .venv\Scripts\activate.bat
-```
-
-Once the virtualenv is activated, you can install the required dependencies.
-
-```
-$ pip install -r requirements.txt
-```
-
-At this point you can now synthesize the CloudFormation template for this code.
-
-```
-$ cdk synth
-```
-
-To add additional dependencies, for example other CDK libraries, just add
-them to your `requirements.txt` file and rerun the `python -m pip install -r requirements.txt`
-command.
 
 ## Useful commands
 
- * `cdk ls`          list all stacks in the app
- * `cdk synth`       emits the synthesized CloudFormation template
- * `cdk deploy`      deploy this stack to your default AWS account/region
- * `cdk diff`        compare deployed stack with current state
- * `cdk docs`        open CDK documentation
-
-Enjoy!
+* `cdk ls` — list all stacks in the app
+* `cdk synth` — emit the synthesized CloudFormation template
+* `cdk deploy` — deploy this stack to the configured AWS account/region
+* `cdk diff` — compare the deployed stack with current state
